@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"image/draw"
 	_ "image/png"
 	"log"
 	"net"
@@ -21,9 +22,9 @@ const (
 	TOTAL_COLS      = TOTAL_ROWS
 	ROWS            = 64
 	COLS            = ROWS
-	HOST            = "0.0.0.0"
+	HOST            = "" // "0.0.0.0"
 	PORT            = "52275"
-	TYPE            = "tcp"
+	TYPE            = "tcp4"
 	FRAME_LEN       = ROWS * COLS * 3
 	expected_length = TOTAL_ROWS * TOTAL_COLS * 4
 )
@@ -119,11 +120,11 @@ func setup() {
 		}
 		img_rgba, ok := img.(*image.RGBA)
 		if !ok {
-			panic("not imgrgba")
+			logrus.Warnf("not imgrgba")
+			rect := img.Bounds()
+			img_rgba = image.NewRGBA(rect)
+			draw.Draw(img_rgba, rect, img, rect.Min, draw.Src)
 		}
-		// rect := img.Bounds()
-		// img_rgba := image.NewRGBA(rect)
-		// draw.Draw(img_rgba, rect, img, rect.Min, draw.Src)
 		frame := img_rgba.Pix
 		if len(frame) != expected_length {
 			panic(len(frame))
@@ -169,6 +170,8 @@ func main() {
 		if err != nil {
 			logrus.Fatal(err)
 		}
+		addr := listen.Addr().String()
+		logrus.Infof("tcp frame server listening on address: '%s'", addr)
 		// close listener
 		defer listen.Close()
 		for {
@@ -209,9 +212,8 @@ func main() {
 
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir(dir)))
 	srv := &http.Server{
-		Handler: router,
-		Addr:    "0.0.0.0:8080",
-		// Good practice: enforce timeouts for servers you create!
+		Handler:      router,
+		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
