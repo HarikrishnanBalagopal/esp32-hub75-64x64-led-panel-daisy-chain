@@ -27,6 +27,7 @@ const (
 	TYPE            = "tcp4"
 	FRAME_LEN       = ROWS * COLS * 3
 	expected_length = TOTAL_ROWS * TOTAL_COLS * 4
+	WEB_STATIC_DIR  = "public"
 )
 
 var (
@@ -182,7 +183,6 @@ func main() {
 			go handleIncomingRequest(conn)
 		}
 	}()
-	dir := "public"
 	router := mux.NewRouter()
 	router.PathPrefix("/ws").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -210,7 +210,7 @@ func main() {
 		}
 	})
 
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir(dir)))
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir(WEB_STATIC_DIR)))
 	srv := &http.Server{
 		Handler:      router,
 		Addr:         ":8080",
