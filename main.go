@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"image/gif"
 	_ "image/png"
 	"log"
 	"net"
@@ -91,6 +92,12 @@ func handleIncomingRequest(conn net.Conn) {
 		current_panel := buffer[0] - '0'
 		// logrus.Infof("got data from client: '%s' %x current_panel: %d", buffer, buffer[0], current_panel)
 		// respond
+		// gif
+		if CURR_GIF_FRAME >= 0 && current_panel == 0 {
+			fill_panels(FRAMES[CURR_GIF_FRAME][:])
+			CURR_GIF_FRAME = (CURR_GIF_FRAME + 1) % len(FRAMES)
+		}
+		// gif
 		xxxx := rgb_frame_panel_3
 		if current_panel == 1 {
 			xxxx = rgb_frame_panel_2
@@ -110,7 +117,75 @@ func handleIncomingRequest(conn net.Conn) {
 	conn.Close()
 }
 
+// --------------------------------------
+
+const (
+	// EXPECTED_W = 498
+	EXPECTED_W = 128
+	EXPECTED_H = EXPECTED_W
+	// EXPECTED_LEN is the length of the palleted image.
+	// Paletted is an in-memory image of uint8 indices into a given palette.
+	EXPECTED_LEN = EXPECTED_W * EXPECTED_H
+	FRAME_W      = 128
+	FRAME_H      = FRAME_W
+	MY_FRAME_LEN = FRAME_W * FRAME_H * 4
+)
+
+type Frame = [MY_FRAME_LEN]byte
+
+var (
+	FRAMES         []Frame
+	CURR_GIF_FRAME = -1
+)
+
+func load_gif(gif_path string) error {
+	img_bytes, err := os.ReadFile(gif_path)
+	if err != nil {
+		return err
+	}
+	img, err := gif.DecodeAll(bytes.NewReader(img_bytes))
+	if err != nil {
+		return err
+	}
+	// logrus.Infof("img_format %s", img_format)
+	// if img_format != "gif" {
+	// 	panic(img_format)
+	// }
+	logrus.Infof("img %T", img)
+	num_frames := len(img.Image)
+	logrus.Infof("len: %d", num_frames)
+	frame0 := img.Image[0]
+	logrus.Infof("frame0 %T", frame0)
+	logrus.Infof("stride: %d", frame0.Stride)
+	logrus.Infof("len: %d EXPECTED_LEN %d", len(frame0.Pix), EXPECTED_LEN)
+	if len(frame0.Pix) != EXPECTED_LEN {
+		return fmt.Errorf("expected: %d actual: %d", EXPECTED_LEN, len(frame0.Pix))
+	}
+	FRAMES = make([]Frame, num_frames)
+	for n := 0; n < num_frames; n++ {
+		logrus.Infof("frame[%d]", n)
+		frame := img.Image[n]
+		for y := 0; y < FRAME_H; y++ {
+			for x := 0; x < FRAME_W; x++ {
+				idx := (y*FRAME_W + x) * 4
+				color := frame.At(x, y)
+				r, g, b, _ := color.RGBA()
+				FRAMES[n][idx+0] = byte(r)
+				FRAMES[n][idx+1] = byte(g)
+				FRAMES[n][idx+2] = byte(b)
+			}
+		}
+	}
+	CURR_GIF_FRAME = 0
+	return nil
+}
+
+// --------------------------------------
+
 func setup() {
+	if err := load_gif("image128.gif"); err == nil {
+		return
+	}
 	if img_bytes, err := os.ReadFile("image128.png"); err == nil {
 		img, img_format, err := image.Decode(bytes.NewReader(img_bytes))
 		if err != nil {
@@ -190,6 +265,7 @@ func main() {
 			logrus.Errorf("failed to upgrade to a websocket")
 			return
 		}
+		CURR_GIF_FRAME = -1
 		conn.WriteMessage(websocket.BinaryMessage, []byte("this is a binary message from the server"))
 		for {
 			msgtype, frame, err := conn.ReadMessage()
