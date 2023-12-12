@@ -7,6 +7,7 @@ import (
 	"image/draw"
 	"image/gif"
 	_ "image/png"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -138,43 +139,155 @@ var (
 	CURR_GIF_FRAME = -1
 )
 
-func load_gif(gif_path string) error {
-	img_bytes, err := os.ReadFile(gif_path)
+// func load_gif(gif_path string) error {
+// 	img_bytes, err := os.ReadFile(gif_path)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	img, err := gif.DecodeAll(bytes.NewReader(img_bytes))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	// logrus.Infof("img_format %s", img_format)
+// 	// if img_format != "gif" {
+// 	// 	panic(img_format)
+// 	// }
+// 	logrus.Infof(
+// 		"img %T len(img.Disposal) %+v img.LoopCount %+v None %+v Back %+v Prev %+v",
+// 		img,
+// 		len(img.Disposal),
+// 		img.LoopCount,
+// 		gif.DisposalNone,
+// 		gif.DisposalBackground,
+// 		gif.DisposalPrevious,
+// 	)
+// 	logrus.Infof("img.Disposal %+v", img.Disposal)
+// 	num_frames := len(img.Image)
+// 	logrus.Infof("len: %d", num_frames)
+// 	frame0 := img.Image[0]
+// 	logrus.Infof("frame0 %T", frame0)
+// 	logrus.Infof("stride: %d", frame0.Stride)
+// 	logrus.Infof("len: %d EXPECTED_LEN %d", len(frame0.Pix), EXPECTED_LEN)
+// 	// if len(frame0.Pix) != EXPECTED_LEN {
+// 	// 	return fmt.Errorf("expected: %d actual: %d", EXPECTED_LEN, len(frame0.Pix))
+// 	// }
+// 	FRAMES = make([]Frame, num_frames)
+// 	pal := img.Image[0].Palette
+// 	var bg_color color.Color = color.RGBA{R: 0, G: 0, B: 0, A: 255}
+// 	if int(img.BackgroundIndex) >= len(pal) {
+// 		bg_color = pal[img.BackgroundIndex]
+// 	}
+// 	for n := 0; n < num_frames; n++ {
+// 		logrus.Infof("frame[%d]", n)
+// 		// prev_frame := img.Image[(n-1+num_frames)%num_frames]
+// 		frame := img.Image[n]
+// 		prev_idx := (n - 1 + num_frames) % num_frames
+// 		for y := 0; y < FRAME_H; y++ {
+// 			for x := 0; x < FRAME_W; x++ {
+// 				idx := (y*FRAME_W + x) * 4
+// 				color := frame.At(x, y)
+// 				r, g, b, a := color.RGBA()
+// 				// logrus.Infof("a %+v", a)
+// 				if a == 0 {
+// 					if n == 0 {
+// 						r, g, b, _ := bg_color.RGBA()
+// 						FRAMES[n][idx+0] = byte(r)
+// 						FRAMES[n][idx+1] = byte(g)
+// 						FRAMES[n][idx+2] = byte(b)
+// 						continue
+// 					}
+// 					// color := prev_frame.At(x, y)
+// 					// r, g, b, _ := color.RGBA()
+// 					FRAMES[n][idx+0] = FRAMES[prev_idx][idx+0]
+// 					FRAMES[n][idx+1] = FRAMES[prev_idx][idx+1]
+// 					FRAMES[n][idx+2] = FRAMES[prev_idx][idx+2]
+// 					continue
+// 				}
+// 				FRAMES[n][idx+0] = byte(r)
+// 				FRAMES[n][idx+1] = byte(g)
+// 				FRAMES[n][idx+2] = byte(b)
+// 			}
+// 		}
+// 	}
+// 	CURR_GIF_FRAME = 0
+// 	return nil
+// }
+
+func getGifDimensions(gif *gif.GIF) (x, y int) {
+	var lowestX int
+	var lowestY int
+	var highestX int
+	var highestY int
+
+	for _, img := range gif.Image {
+		if img.Rect.Min.X < lowestX {
+			lowestX = img.Rect.Min.X
+		}
+		if img.Rect.Min.Y < lowestY {
+			lowestY = img.Rect.Min.Y
+		}
+		if img.Rect.Max.X > highestX {
+			highestX = img.Rect.Max.X
+		}
+		if img.Rect.Max.Y > highestY {
+			highestY = img.Rect.Max.Y
+		}
+	}
+
+	return highestX - lowestX, highestY - lowestY
+}
+
+// Decode reads and analyzes the given reader as a GIF image
+func SplitAnimatedGIF(reader io.Reader, out_dir string) (err error) {
+	defer func() {
+		if _err := recover(); _err != nil {
+			err = fmt.Errorf("error while decoding: %w", _err.(error))
+		}
+	}()
+	gif, err := gif.DecodeAll(reader)
 	if err != nil {
 		return err
 	}
-	img, err := gif.DecodeAll(bytes.NewReader(img_bytes))
-	if err != nil {
-		return err
-	}
-	// logrus.Infof("img_format %s", img_format)
-	// if img_format != "gif" {
-	// 	panic(img_format)
-	// }
-	logrus.Infof("img %T", img)
-	num_frames := len(img.Image)
-	logrus.Infof("len: %d", num_frames)
-	frame0 := img.Image[0]
-	logrus.Infof("frame0 %T", frame0)
-	logrus.Infof("stride: %d", frame0.Stride)
-	logrus.Infof("len: %d EXPECTED_LEN %d", len(frame0.Pix), EXPECTED_LEN)
-	if len(frame0.Pix) != EXPECTED_LEN {
-		return fmt.Errorf("expected: %d actual: %d", EXPECTED_LEN, len(frame0.Pix))
-	}
+	imgWidth, imgHeight := getGifDimensions(gif)
+	overpaintImage := image.NewRGBA(image.Rect(0, 0, imgWidth, imgHeight))
+	draw.Draw(overpaintImage, overpaintImage.Bounds(), gif.Image[0], image.Point{}, draw.Src)
+	num_frames := len(gif.Image)
 	FRAMES = make([]Frame, num_frames)
-	for n := 0; n < num_frames; n++ {
-		logrus.Infof("frame[%d]", n)
-		frame := img.Image[n]
-		for y := 0; y < FRAME_H; y++ {
-			for x := 0; x < FRAME_W; x++ {
-				idx := (y*FRAME_W + x) * 4
-				color := frame.At(x, y)
-				r, g, b, _ := color.RGBA()
-				FRAMES[n][idx+0] = byte(r)
-				FRAMES[n][idx+1] = byte(g)
-				FRAMES[n][idx+2] = byte(b)
+	for i, srcImg := range gif.Image {
+		draw.Draw(overpaintImage, overpaintImage.Bounds(), srcImg, image.Point{}, draw.Over)
+		// file, err := os.Create(fmt.Sprintf("%s/img%d.png", out_dir, i))
+		// if err != nil {
+		// 	return err
+		// }
+		// if err := png.Encode(file, overpaintImage); err != nil {
+		// 	return err
+		// }
+		// file.Close()
+		for y := 0; y < 128; y++ {
+			for x := 0; x < 128; x++ {
+				idx := (y*128 + x) * 4
+				c := overpaintImage.At(x, y)
+				r, g, b, _ := c.RGBA()
+				FRAMES[i][idx+0] = byte(r)
+				FRAMES[i][idx+1] = byte(g)
+				FRAMES[i][idx+2] = byte(b)
 			}
 		}
+	}
+	return nil
+}
+
+func load_gif(gif_path string) error {
+	gif_bytes, err := os.ReadFile(gif_path)
+	if err != nil {
+		return err
+	}
+	out_dir := "output"
+	if err := os.MkdirAll(out_dir, 0777); err != nil {
+		return err
+	}
+	if err := SplitAnimatedGIF(bytes.NewReader(gif_bytes), out_dir); err != nil {
+		return err
 	}
 	CURR_GIF_FRAME = 0
 	return nil
@@ -183,10 +296,16 @@ func load_gif(gif_path string) error {
 // --------------------------------------
 
 func setup() {
-	if err := load_gif("image128.gif"); err == nil {
+	gif_path := "image128.gif"
+	logrus.Infof("trying to load the gif '%s'", gif_path)
+	if err := load_gif(gif_path); err == nil {
 		return
+	} else {
+		logrus.Errorf("failed to load the gif '%s'. Error: %q", gif_path, err)
 	}
-	if img_bytes, err := os.ReadFile("image128.png"); err == nil {
+	img_path := "image128.png"
+	logrus.Infof("trying to load the image '%s'", img_path)
+	if img_bytes, err := os.ReadFile(img_path); err == nil {
 		img, img_format, err := image.Decode(bytes.NewReader(img_bytes))
 		if err != nil {
 			panic(err)
@@ -208,6 +327,8 @@ func setup() {
 		fill_panels(frame)
 		logrus.Infof("setup done with an image")
 		return
+	} else {
+		logrus.Errorf("failed to load the image '%s'. Error: %q", img_path, err)
 	}
 	// if img_bytes, err := os.ReadFile("image128.bytes"); err == nil {
 	// 	const mylen = (128 * 128 * 3)
