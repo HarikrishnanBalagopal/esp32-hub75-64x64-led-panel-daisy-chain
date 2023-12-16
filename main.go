@@ -37,6 +37,7 @@ var (
 	rgb_frame_panel_1 = make([]byte, FRAME_LEN)
 	rgb_frame_panel_2 = make([]byte, FRAME_LEN)
 	rgb_frame_panel_3 = make([]byte, FRAME_LEN)
+	full_frame        = make([]byte, 4*FRAME_LEN)
 	upgrader          = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -84,6 +85,19 @@ func fill_panels(frame []byte) {
 			rgb_frame_panel_3[dst+2] = frame[src+2]
 		}
 	}
+	// copy all panels into the full frame
+	if copy(full_frame[0*FRAME_LEN:], rgb_frame_panel_3) != FRAME_LEN {
+		panic("copied bytes failed for 1st panel")
+	}
+	if copy(full_frame[1*FRAME_LEN:], rgb_frame_panel_2) != FRAME_LEN {
+		panic("copied bytes failed for 2nd panel")
+	}
+	if copy(full_frame[2*FRAME_LEN:], rgb_frame_panel_0) != FRAME_LEN {
+		panic("copied bytes failed for 3rd panel")
+	}
+	if copy(full_frame[3*FRAME_LEN:], rgb_frame_panel_1) != FRAME_LEN {
+		panic("copied bytes failed for 4th panel")
+	}
 }
 
 func handleIncomingRequest(conn net.Conn) {
@@ -94,7 +108,7 @@ func handleIncomingRequest(conn net.Conn) {
 		// logrus.Infof("got data from client: '%s' %x current_panel: %d", buffer, buffer[0], current_panel)
 		// respond
 		// gif
-		if CURR_GIF_FRAME >= 0 && current_panel == 0 {
+		if CURR_GIF_FRAME >= 0 && (current_panel == 0 || current_panel == 4) {
 			fill_panels(FRAMES[CURR_GIF_FRAME][:])
 			CURR_GIF_FRAME = (CURR_GIF_FRAME + 1) % len(FRAMES)
 		}
@@ -106,6 +120,9 @@ func handleIncomingRequest(conn net.Conn) {
 			xxxx = rgb_frame_panel_0
 		} else if current_panel == 3 {
 			xxxx = rgb_frame_panel_1
+		} else if current_panel == 4 {
+			// send all 4 frames
+			xxxx = full_frame
 		}
 		if _, err := conn.Write(xxxx); err != nil {
 			logrus.Errorf("failed to write. Error: %q", err)
