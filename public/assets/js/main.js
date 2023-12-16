@@ -23,9 +23,10 @@ const my_comms = () => {
     const UNSIGNED_BYTE = ctx.UNSIGNED_BYTE;
     console.log('W', W, 'H', H, 'size', size, 'new_size', new_size);
     console.log('RGB', RGB, 'RGBA', RGBA, 'UNSIGNED_BYTE', UNSIGNED_BYTE);
-    const pixels = new Uint8Array(new_size);
-    ctx.readPixels(0, 0, DRAW_W, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
-    console.log('pixels', pixels);
+    // const pixels = new Uint8Array(new_size);
+    // ctx.readPixels(0, 0, DRAW_W, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
+    // ctx.readPixels(0, 0, DRAW_H, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
+    // console.log('pixels', pixels);
 
     // websockets
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
@@ -50,8 +51,9 @@ const my_comms = () => {
             if (t - last_t < 1) return;
             last_t = t;
             // ctx.readPixels(0, 0, DRAW_W, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
-            ctx.readPixels(0, 0, DRAW_H, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
-            smaller_ctx.drawImage(can, 0, 0, DRAW_W, DRAW_H, 0, 0, 128, 128);
+            // ctx.readPixels(0, 0, DRAW_H, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
+            // smaller_ctx.drawImage(can, 0, 0, DRAW_W, DRAW_H, 0, 0, 128, 128);
+            smaller_ctx.drawImage(can, 0, 0, DRAW_H, DRAW_H, 0, 0, 128, 128);
             const smaller_img_data = smaller_ctx.getImageData(0, 0, 128, 128);
             // console.log('smaller_img_data:', smaller_img_data);
             ws.send(smaller_img_data.data);
