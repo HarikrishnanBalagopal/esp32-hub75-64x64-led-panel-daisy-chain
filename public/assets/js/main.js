@@ -49,7 +49,8 @@ const my_comms = () => {
             requestAnimationFrame(step);
             if (t - last_t < 1) return;
             last_t = t;
-            ctx.readPixels(0, 0, DRAW_W, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
+            // ctx.readPixels(0, 0, DRAW_W, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
+            ctx.readPixels(0, 0, DRAW_H, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
             smaller_ctx.drawImage(can, 0, 0, DRAW_W, DRAW_H, 0, 0, 128, 128);
             const smaller_img_data = smaller_ctx.getImageData(0, 0, 128, 128);
             // console.log('smaller_img_data:', smaller_img_data);

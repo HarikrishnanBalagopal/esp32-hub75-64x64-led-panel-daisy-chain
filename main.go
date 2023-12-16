@@ -48,8 +48,10 @@ func fill_panels(frame []byte) {
 	// panel 0
 	for row := 0; row < ROWS; row++ {
 		for col := 0; col < COLS; col++ {
-			src := 4 * (row*TOTAL_COLS + col)
+			// src := 4 * (row*TOTAL_COLS + col)
+			src := 4 * (col*TOTAL_COLS + row)
 			dst := 3 * (row*COLS + col)
+			// dst := 3 * ((ROWS-1-row)*COLS + col)
 			rgb_frame_panel_0[dst+0] = frame[src+0]
 			rgb_frame_panel_0[dst+1] = frame[src+1]
 			rgb_frame_panel_0[dst+2] = frame[src+2]
@@ -58,8 +60,10 @@ func fill_panels(frame []byte) {
 	// panel 1
 	for row := 0; row < ROWS; row++ {
 		for col := 0; col < COLS; col++ {
-			src := 4 * (row*TOTAL_COLS + COLS + col)
+			// src := 4 * (row*TOTAL_COLS + COLS + col)
+			src := 4 * (col*TOTAL_COLS + COLS + row)
 			dst := 3 * (row*COLS + col)
+			// dst := 3 * ((ROWS-1-row)*COLS + col)
 			rgb_frame_panel_1[dst+0] = frame[src+0]
 			rgb_frame_panel_1[dst+1] = frame[src+1]
 			rgb_frame_panel_1[dst+2] = frame[src+2]
@@ -68,8 +72,10 @@ func fill_panels(frame []byte) {
 	// panel 2
 	for row := 0; row < ROWS; row++ {
 		for col := 0; col < COLS; col++ {
-			src := 4 * ((ROWS+row)*TOTAL_COLS + col)
+			// src := 4 * ((ROWS+row)*TOTAL_COLS + col)
+			src := 4 * ((ROWS+col)*TOTAL_COLS + row)
 			dst := 3 * ((ROWS-1-row)*COLS + (COLS - 1 - col))
+			// dst := 3 * (row*COLS + (COLS - 1 - col))
 			rgb_frame_panel_2[dst+0] = frame[src+0]
 			rgb_frame_panel_2[dst+1] = frame[src+1]
 			rgb_frame_panel_2[dst+2] = frame[src+2]
@@ -78,8 +84,10 @@ func fill_panels(frame []byte) {
 	// panel 3
 	for row := 0; row < ROWS; row++ {
 		for col := 0; col < COLS; col++ {
-			src := 4 * ((ROWS+row)*TOTAL_COLS + COLS + col)
+			// src := 4 * ((ROWS+row)*TOTAL_COLS + COLS + col)
+			src := 4 * ((ROWS+col)*TOTAL_COLS + COLS + row)
 			dst := 3 * ((ROWS-1-row)*COLS + (COLS - 1 - col))
+			// dst := 3 * (row*COLS + (COLS - 1 - col))
 			rgb_frame_panel_3[dst+0] = frame[src+0]
 			rgb_frame_panel_3[dst+1] = frame[src+1]
 			rgb_frame_panel_3[dst+2] = frame[src+2]
