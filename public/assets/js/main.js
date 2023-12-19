@@ -23,7 +23,7 @@ const my_comms = () => {
     const UNSIGNED_BYTE = ctx.UNSIGNED_BYTE;
     console.log('W', W, 'H', H, 'size', size, 'new_size', new_size);
     console.log('RGB', RGB, 'RGBA', RGBA, 'UNSIGNED_BYTE', UNSIGNED_BYTE);
-    // const pixels = new Uint8Array(new_size);
+    const pixels = new Uint8Array(new_size);
     // ctx.readPixels(0, 0, DRAW_W, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
     // ctx.readPixels(0, 0, DRAW_H, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
     // console.log('pixels', pixels);
@@ -43,6 +43,11 @@ const my_comms = () => {
         }
     };
     // const smaller_img_data = smaller_ctx.createImageData(DRAW_W, DRAW_H);
+    const DRAW_W2 = Math.floor(DRAW_W/2);
+    const DRAW_H2 = Math.floor(DRAW_H/2);
+    // const MIN_X = DRAW_W2-64;
+    const MIN_X = DRAW_W2-DRAW_H2;
+    // const MAX_X = DRAW_W2+64;
     const setup = () => {
         console.log("setup start");
         let last_t = 0;
@@ -51,9 +56,13 @@ const my_comms = () => {
             if (t - last_t < 1) return;
             last_t = t;
             // ctx.readPixels(0, 0, DRAW_W, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
+            // TODO: for some reason the below readPixels line is very necessary
+            // (otherwise flickering with black screen happens)
             // ctx.readPixels(0, 0, DRAW_H, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
+            ctx.readPixels(0, 0, DRAW_W, DRAW_H, RGBA, UNSIGNED_BYTE, pixels);
             // smaller_ctx.drawImage(can, 0, 0, DRAW_W, DRAW_H, 0, 0, 128, 128);
-            smaller_ctx.drawImage(can, 0, 0, DRAW_H, DRAW_H, 0, 0, 128, 128);
+            // smaller_ctx.drawImage(can, 0, 0, DRAW_H, DRAW_H, 0, 0, 128, 128);
+            smaller_ctx.drawImage(can, MIN_X, 0, DRAW_H, DRAW_H, 0, 0, 128, 128);
             const smaller_img_data = smaller_ctx.getImageData(0, 0, 128, 128);
             // console.log('smaller_img_data:', smaller_img_data);
             ws.send(smaller_img_data.data);
